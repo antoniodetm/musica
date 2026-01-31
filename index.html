@@ -15,85 +15,99 @@
             text-align: center; 
             background: var(--bg); 
             color: white; 
-            padding: 40px 20px 120px 20px; /* Padding extra abajo para que el botón fijo no tape la lista */
             margin: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh; /* Ocupa toda la altura de la pantalla */
+            overflow: hidden; /* Evita el scroll doble en el cuerpo */
         }
 
-        /* Botón principal */
+        /* Cabecera y botón de acción (No se mueven) */
+        header {
+            padding: 40px 20px 20px;
+            flex-shrink: 0;
+        }
+
         .circle-btn {
             width: 220px; height: 220px; border-radius: 50%; border: none;
             background: linear-gradient(145deg, var(--primary), #14833b);
             color: white; font-weight: 800; font-size: 22px; cursor: pointer; 
-            margin: 40px auto; display: block;
+            margin: 0 auto; display: block;
             box-shadow: 0 10px 30px rgba(29, 185, 84, 0.3);
             -webkit-tap-highlight-color: transparent;
         }
         .circle-btn:active { transform: scale(0.95); }
-        .circle-btn:disabled { background: #444; opacity: 0.7; }
 
         #loader { display: none; color: var(--primary); font-size: 20px; font-weight: bold; margin: 20px; }
-        
-        /* Resultado */
+
+        /* Contenedor de la lista con scroll infinito */
+        main {
+            flex-grow: 1;
+            overflow-y: auto; /* Aquí ocurre el scroll infinito */
+            padding: 0 20px;
+            -webkit-overflow-scrolling: touch; /* Scroll suave en iOS */
+        }
+
         #result-container { 
-            background: var(--card); border-radius: 25px; padding: 30px; 
-            margin: 30px auto; max-width: 500px; display: none; border: 2px solid #333;
-        }
-        #result-text { font-size: 24px; margin-bottom: 15px; }
-        .add-btn { 
-            background: var(--primary); border: none; color: white; 
-            font-size: 35px; border-radius: 50%; width: 70px; height: 70px; margin: 0 auto;
+            background: var(--card); border-radius: 25px; padding: 25px; 
+            margin: 20px auto; max-width: 500px; display: none; border: 2px solid var(--primary);
         }
 
-        /* Historial */
-        #history { text-align: left; max-width: 600px; margin: 50px auto 20px auto; }
-        h3 { color: var(--primary); font-size: 26px; border-bottom: 2px solid #333; padding-bottom: 10px; }
+        #history { text-align: left; max-width: 600px; margin: 20px auto; }
+        h3 { color: var(--primary); font-size: 26px; position: sticky; top: 0; background: var(--bg); margin: 0; padding: 10px 0; }
+        
         .history-item { 
-            background: #282828; padding: 20px; margin-bottom: 12px; 
+            background: #282828; padding: 20px; margin: 12px 0; 
             border-radius: 12px; font-size: 18px; border-left: 5px solid var(--primary);
+            animation: slideIn 0.3s ease-out; /* Animación para la nueva canción */
         }
 
-        /* BOTÓN FIJO EN EL BORDE INFERIOR */
-        .footer-container {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            background: #121212; /* Fondo sólido para que no se mezcle con la lista al hacer scroll */
-            padding: 15px 0;
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Pie de página fijo con el botón de descarga */
+        footer {
+            flex-shrink: 0;
+            padding: 20px 0 40px 0; /* Espacio extra abajo para iPhone (Home Bar) */
+            background: linear-gradient(to top, var(--bg) 80%, transparent);
             border-top: 1px solid #333;
-            box-sizing: border-box;
-            z-index: 100;
         }
 
         .export-btn {
             background: var(--primary); color: white; border: none;
-            padding: 18px; border-radius: 12px; cursor: pointer;
+            padding: 20px; border-radius: 15px; cursor: pointer;
             font-size: 18px; width: 90%; font-weight: bold;
-            box-shadow: 0 -5px 15px rgba(0,0,0,0.5);
+            box-shadow: 0 -5px 20px rgba(0,0,0,0.4);
         }
 
-        .delete-btn { color: #ff4444; background: none; border: none; width: 100%; padding: 15px; font-size: 14px; opacity: 0.6; }
+        .delete-btn { color: #ff4444; background: none; border: none; font-size: 14px; opacity: 0.5; margin-top: 10px; cursor: pointer; }
     </style>
 </head>
 <body>
 
-    <button id="btn" class="circle-btn">TOCA PARA<br>IDENTIFICAR</button>
-    <div id="loader">ESCUCHANDO...</div>
+    <header>
+        <button id="btn" class="circle-btn">TOCA PARA<br>IDENTIFICAR</button>
+        <div id="loader">ESCUCHANDO...</div>
+        
+        <div id="result-container">
+            <div id="result-text"></div>
+            <button id="addBtn" class="add-btn" style="background: var(--primary); border: none; color: white; font-size: 35px; border-radius: 50%; width: 60px; height: 60px; margin-top: 15px;">+</button>
+        </div>
+    </header>
 
-    <div id="result-container">
-        <div id="result-text"></div>
-        <button id="addBtn" class="add-btn">+</button>
-    </div>
+    <main>
+        <div id="history">
+            <h3>Mi Lista</h3>
+            <div id="list-container"></div>
+        </div>
+        <button onclick="borrarLista()" class="delete-btn">Vaciar historial</button>
+    </main>
 
-    <div id="history">
-        <h3>Mi Lista</h3>
-        <div id="list-container"></div>
-        <button onclick="borrarLista()" class="delete-btn">Limpiar todo el historial</button>
-    </div>
-
-    <div class="footer-container">
+    <footer>
         <button id="exportBtn" class="export-btn">📥 Descargar Lista (.txt)</button>
-    </div>
+    </footer>
 
     <script>
         const btn = document.getElementById('btn');
@@ -131,7 +145,7 @@
                     loader.innerText = "IDENTIFICANDO..."; 
                     stream.getTracks().forEach(track => track.stop());
                 }, 6000);
-            } catch (err) { alert("Error: Acceso denegado al micro."); btn.disabled = false; }
+            } catch (err) { alert("Error: Acceso al micro denegado."); btn.disabled = false; }
         };
 
         async function identificar(blob) {
@@ -145,16 +159,17 @@
 
                 if (data.result) {
                     ultimaCancion = `${data.result.title} - ${data.result.artist}`;
-                    resultText.innerHTML = `<strong>${data.result.title}</strong><br>por ${data.result.artist}`;
+                    resultText.innerHTML = `<strong>${data.result.title}</strong><br>de ${data.result.artist}`;
                     resultContainer.style.display = 'block';
-                } else { alert("Canción no reconocida."); }
+                } else { alert("No se ha podido reconocer."); }
             } catch (e) { alert("Error de conexión."); }
             finally { btn.disabled = false; loader.style.display = 'none'; loader.innerText = "ESCUCHANDO..."; }
         }
 
         addBtn.onclick = () => {
             let canciones = JSON.parse(localStorage.getItem('mis_canciones') || "[]");
-            canciones.push(ultimaCancion);
+            // Usamos unshift para que la última canción sea siempre la primera del array
+            canciones.unshift(ultimaCancion); 
             localStorage.setItem('mis_canciones', JSON.stringify(canciones));
             mostrarLista();
             resultContainer.style.display = 'none';
@@ -162,24 +177,23 @@
 
         function mostrarLista() {
             let canciones = JSON.parse(localStorage.getItem('mis_canciones') || "[]");
-            listContainer.innerHTML = canciones.map(c => `<div class="history-item">${c}</div>`).reverse().join('');
+            // Al haber usado unshift, ya vienen ordenadas de más nueva a más vieja
+            listContainer.innerHTML = canciones.map(c => `<div class="history-item">${c}</div>`).join('');
         }
 
         exportBtn.onclick = () => {
             let canciones = JSON.parse(localStorage.getItem('mis_canciones') || "[]");
-            if (canciones.length === 0) return alert("Lista vacía");
-            let texto = "MIS CANCIONES\n" + "=".repeat(20) + "\n\n" + canciones.join("\n");
+            if (canciones.length === 0) return alert("No hay canciones para guardar.");
+            let texto = "MI LISTA DE CANCIONES\n" + "=".repeat(25) + "\n\n" + canciones.join("\n");
             let blob = new Blob([texto], { type: "text/plain" });
-            let url = window.URL.createObjectURL(blob);
             let a = document.createElement("a");
-            a.href = url;
-            a.download = "musica.txt";
+            a.href = URL.createObjectURL(blob);
+            a.download = "lista_musica.txt";
             a.click();
-            window.URL.revokeObjectURL(url);
         };
 
         function borrarLista() {
-            if(confirm("¿Borrar todo?")) {
+            if(confirm("¿Seguro que quieres borrar toda la lista?")) {
                 localStorage.removeItem('mis_canciones');
                 mostrarLista();
             }
