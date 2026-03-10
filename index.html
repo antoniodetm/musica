@@ -117,6 +117,7 @@
         const exportBtn = document.getElementById('exportBtn');
 
         let ultimaCancion = "";
+        // Asegúrate de que este token sea válido
         const MI_TOKEN = "7944f7d023c428959f5e1e7810d12bc0";
 
         window.onload = mostrarLista;
@@ -128,66 +129,70 @@
                 const audioChunks = [];
 
                 mediaRecorder.ondataavailable = (e) => audioChunks.push(e.data);
+                
                 mediaRecorder.onstop = async () => {
-                    const audioBlob = new Blob(audioChunks);
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
                     identificar(audioBlob);
+                    stream.getTracks().forEach(track => track.stop());
                 };
 
                 mediaRecorder.start();
                 btn.disabled = true;
                 loader.style.display = 'block';
+                loader.innerText = "ESCUCHANDO...";
                 resultContainer.style.display = 'none';
                 
+                // 7 segundos de grabación para dar margen a la API
                 setTimeout(() => { 
                     if (mediaRecorder.state === "recording") {
                         mediaRecorder.stop(); 
                         loader.innerText = "BUSCANDO CANCIÓN..."; 
-                        stream.getTracks().forEach(track => track.stop());
                     }
-                }, 6000); // 6 segundos de escucha
+                }, 7000); 
+
             } catch (err) { 
-                alert("Error: No se pudo acceder al micrófono."); 
+                alert("Error: No se pudo acceder al micrófono. Verifica los permisos."); 
                 btn.disabled = false; 
                 loader.style.display = 'none';
             }
         };
 
         async function identificar(blob) {
-            // Convertimos el audio a Base64 para máxima compatibilidad con AudD
-            const reader = new FileReader();
-            reader.readAsDataURL(blob);
-            reader.onloadend = async () => {
-                const base64Audio = reader.result.split(',')[1];
-
-                const formData = new FormData();
-                formData.append('audio', base64Audio);
-                formData.append('api_token', MI_TOKEN);
+            const formData = new FormData();
+            // Enviamos el blob directamente como un archivo para que AudD lo procese mejor
+            formData.append('file', blob, 'recording.wav');
+            formData.append('api_token', MI_TOKEN);
+            
+            try {
+                const response = await fetch('https://api.audd.io/', { 
+                    method: 'POST', 
+                    body: formData 
+                });
                 
-                try {
-                    const response = await fetch('https://api.audd.io/', { method: 'POST', body: formData });
-                    const data = await response.json();
+                const data = await response.json();
 
-                    if (data.status === "success" && data.result) {
-                        ultimaCancion = `${data.result.title} - ${data.result.artist}`;
-                        resultText.innerHTML = `<strong>${data.result.title}</strong><br>de ${data.result.artist}`;
-                        resultContainer.style.display = 'block';
-                    } else { 
-                        alert("No se reconoció nada. ¡Inténtalo de nuevo!"); 
-                    }
-                } catch (e) { 
-                    alert("Error de conexión con la API."); 
-                } finally { 
-                    btn.disabled = false; 
-                    loader.style.display = 'none'; 
-                    loader.innerText = "ESCUCHANDO..."; 
+                if (data.status === "success" && data.result) {
+                    const titulo = data.result.title;
+                    const artista = data.result.artist;
+                    ultimaCancion = `${titulo} - ${artista}`;
+                    
+                    resultText.innerHTML = `<strong>${titulo}</strong><br>de ${artista}`;
+                    resultContainer.style.display = 'block';
+                } else { 
+                    alert("No se pudo identificar la canción. Prueba a acercar más el teléfono al altavoz."); 
                 }
-            };
+            } catch (e) { 
+                console.error("Error API:", e);
+                alert("Error de conexión con el servidor de reconocimiento."); 
+            } finally { 
+                btn.disabled = false; 
+                loader.style.display = 'none'; 
+            }
         }
 
         addBtn.onclick = () => {
             let canciones = JSON.parse(localStorage.getItem('mis_canciones') || "[]");
-            // Evitar duplicados seguidos
-            if (canciones[0] !== ultimaCancion) {
+            if (ultimaCancion && canciones[0] !== ultimaCancion) {
                 canciones.unshift(ultimaCancion); 
                 localStorage.setItem('mis_canciones', JSON.stringify(canciones));
                 mostrarLista();
