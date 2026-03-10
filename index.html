@@ -72,6 +72,7 @@
             padding: 20px 0 30px 0;
             background: var(--bg);
             border-top: 1px solid #333;
+            position: relative;
         }
 
         .export-btn {
@@ -81,6 +82,14 @@
         }
 
         .delete-btn { color: #ff4444; background: none; border: none; font-size: 14px; opacity: 0.6; margin: 20px 0; cursor: pointer; width: 100%; }
+
+        .version-tag {
+            position: absolute;
+            bottom: 5px;
+            right: 10px;
+            font-size: 10px;
+            color: #555;
+        }
     </style>
 </head>
 <body>
@@ -105,6 +114,7 @@
 
     <footer>
         <button id="exportBtn" class="export-btn">📥 Descargar Lista (.txt)</button>
+        <div class="version-tag">v1.0.2</div>
     </footer>
 
     <script>
@@ -117,7 +127,6 @@
         const exportBtn = document.getElementById('exportBtn');
 
         let ultimaCancion = "";
-        // Asegúrate de que este token sea válido
         const MI_TOKEN = "7944f7d023c428959f5e1e7810d12bc0";
 
         window.onload = mostrarLista;
@@ -142,16 +151,14 @@
                 loader.innerText = "ESCUCHANDO...";
                 resultContainer.style.display = 'none';
                 
-                // 7 segundos de grabación para dar margen a la API
                 setTimeout(() => { 
                     if (mediaRecorder.state === "recording") {
                         mediaRecorder.stop(); 
                         loader.innerText = "BUSCANDO CANCIÓN..."; 
                     }
-                }, 7000); 
-
+                }, 7000); // 7 segundos de grabación
             } catch (err) { 
-                alert("Error: No se pudo acceder al micrófono. Verifica los permisos."); 
+                alert("Error: Asegúrate de dar permiso al micrófono y usar HTTPS."); 
                 btn.disabled = false; 
                 loader.style.display = 'none';
             }
@@ -159,8 +166,8 @@
 
         async function identificar(blob) {
             const formData = new FormData();
-            // Enviamos el blob directamente como un archivo para que AudD lo procese mejor
-            formData.append('file', blob, 'recording.wav');
+            // Cambiado a envío directo de archivo (binario) para mayor compatibilidad
+            formData.append('file', blob, 'audio.wav');
             formData.append('api_token', MI_TOKEN);
             
             try {
@@ -168,22 +175,20 @@
                     method: 'POST', 
                     body: formData 
                 });
-                
                 const data = await response.json();
 
                 if (data.status === "success" && data.result) {
-                    const titulo = data.result.title;
+                    const cancion = data.result.title;
                     const artista = data.result.artist;
-                    ultimaCancion = `${titulo} - ${artista}`;
+                    ultimaCancion = `${cancion} - ${artista}`;
                     
-                    resultText.innerHTML = `<strong>${titulo}</strong><br>de ${artista}`;
+                    resultText.innerHTML = `<strong>${cancion}</strong><br>de ${artista}`;
                     resultContainer.style.display = 'block';
                 } else { 
-                    alert("No se pudo identificar la canción. Prueba a acercar más el teléfono al altavoz."); 
+                    alert("No se reconoció la canción. ¡Prueba de nuevo!"); 
                 }
             } catch (e) { 
-                console.error("Error API:", e);
-                alert("Error de conexión con el servidor de reconocimiento."); 
+                alert("Error de conexión con el servidor."); 
             } finally { 
                 btn.disabled = false; 
                 loader.style.display = 'none'; 
